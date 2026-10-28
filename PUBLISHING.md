@@ -1,44 +1,46 @@
-# 传到 GitHub
+# 维护与发布
 
-仓库：https://github.com/heyikai060215-jpg/dsh-wechat-wake （空仓库，默认分支 `main`）
+仓库：https://github.com/heyikai060215-jpg/dsh-wechat-wake
 
-这个目录是干净的仓库结构：没有 `node_modules`、没有 `.venv`、没有 `wechat-wake.json` 这类运行时状态。
+本机工作目录：`D:\dsh-mod\dsh-wechat-wake`（已经 `git init` 过，`origin` 指向上面的仓库，`main` 分支）
+本机 git：`D:\tools\git\cmd\git.exe`（MinGit 2.56，已加入用户 PATH）
 
-## 方式一：网页拖拽（不用装 git）
-
-1. 解压 `dsh-wechat-wake-0.1.0.zip`；
-2. 打开仓库 → **Add file → Upload files**；
-3. 把 `dsh-wechat-wake` 文件夹里的**内容**（不是文件夹本身）全选拖进去；
-   - Windows 默认不显示 `.gitignore`，先在「查看 → 显示 → 隐藏的项目」里打开，否则会漏掉它；
-4. Commit message 写 `feat: 微信里的定时唤醒`，提交。
-
-## 方式二：Git 命令
+## 日常改完怎么发
 
 ```powershell
-cd D:\dsh-mod\github-ready\dsh-wechat-wake
-git init
-git add .
-git commit -m "feat: 微信里的定时唤醒"
-git branch -M main
-git remote add origin https://github.com/heyikai060215-jpg/dsh-wechat-wake.git
-git push -u origin main
+cd D:\dsh-mod\dsh-wechat-wake
+git add -A
+git commit -m "fix: ……"          # 中文提交信息请写到文件里再用 -F，避免 PowerShell 编码把中文变乱码
+git push
 ```
 
-首次 push 会弹 GitHub 登录（或要 PAT 当密码）；本机目前没装 git，需要先装。
+中文提交信息的安全写法（PowerShell 直接传 `-m` 会按 GBK 编码，推到 GitHub 上就是乱码）：
 
-## 方式三：给 agent 一个 token，让它用 API 推
+```powershell
+[System.IO.File]::WriteAllText("$env:TEMP\msg.txt", "fix: 修掉某个问题", (New-Object System.Text.UTF8Encoding($false)))
+git commit -F "$env:TEMP\msg.txt"
+```
 
-生成 fine-grained token（仅这一个仓库，权限 `Contents: Read and write`），交给 agent，它就能把文件逐个提交上去，不用手动拖。
+## 发版
 
-## 上传前检查
+```powershell
+git tag -a v0.1.1 -m "v0.1.1"
+git push origin v0.1.1
+```
 
-- 不要提交 `wechat-wake.json`（里面是待触发列表、聊天键、本机路径）
-- 不要提交 `node_modules/`、`.venv/`、日志和 `*.zip`
-- `README.md` 里出现的聊天号 / wxid 都是占位写法，不要换成真实值
-- 改过本机 `config/wechatagent.json` 的授权，那属于本机私有配置，不进仓库
+打完 tag 之后，别人可以这样钉版本安装：
 
-## 提交后建议顺手做的
+```sh
+dsh plugin --profile web add github:heyikai060215-jpg/dsh-wechat-wake#v0.1.1
+```
 
-- 仓库 **About** 右侧加 topics：`deepseek-harness` `dsh-plugin` `wechat` `reminder` `agent`
-- 描述直接用：给微信里的 agent 一组自己的定时工具：到点它自己醒过来说话，说的话直接落进当前微信聊天。
-- 发版打个 `v0.1.0` tag，以后 `dsh plugin add github:...` 能指定版本
+## 提交前检查
+
+- 不要提交 `wechat-wake.json`（待触发列表、聊天键、本机路径）——`.gitignore` 已经挡住
+- 不要提交 `node_modules/`、`.venv/`、日志、`*.zip`
+- `README.md` / `tools/selftest.mjs` 里的聊天号和 wxid 保持占位写法
+- 本机 `config/wechatagent.json` 里的授权属于私有配置，不进仓库
+
+## 关于凭据
+
+这台机器的 Windows 凭据管理器里已经存了 `git:https://github.com`（用户 `heyikai060215-jpg`），git 走的是 `credential.helper = manager`，所以 `push` 不用每次输密码。换机器时要重新登录一次。
