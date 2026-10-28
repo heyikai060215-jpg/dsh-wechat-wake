@@ -49,6 +49,65 @@ node tools/selftest.mjs social-xxxxxxxx
 
 到点流程：复查聊天还在微信白名单 → `wake` 走 `agent.followup()` 叫醒会话 → 抓这一轮的正文（去掉 `RESPOND:` 前缀）→ 发到微信；没抓到正文 / 这一轮报错 / 超时 120 秒 → 退化成发 `⏰ note`，保证「到点一定有动静」。
 
+```mermaid
+sequenceDiagram
+    participant U as 微信里的你
+    participant A as agent（社交模式会话）
+    participant P as dsh-wechat-wake
+    participant H as 微信 hook
+    U->>A: 三分钟后提醒我喝水
+    A->>P: remind_later(note, delay_seconds)
+    P->>P: 挂定时器 + 写 $DSH_HOME/wechat-wake.json
+    Note over P: 三分钟后
+    P->>A: agent.followup(到点唤醒)
+    A->>A: 现查 / 现想（wake 模式）
+    A-->>P: assistant/message → turn/end
+    P->>H: POST /SendTextMsg
+    H-->>U: 这条消息是它自己发的
+    P->>P: 标记 delivered / confirmed
+```
+
+## 实测记录
+
+真机（微信私聊、社交模式、人格式会话）跑通的一条，状态文件里的原文：
+
+```json
+{
+  "id": "rw-47b31757",
+  "sessionId": "social-8b23659d…",
+  "chat": "wechat:private:<聊天号>",
+  "note": "本鲸来催了——喝水！快端起来灌两口，别让本鲸催第二遍哦 (￣^￣)",
+  "mode": "text",
+  "dueAt": 1793122435446,
+  "state": "delivered",
+  "firedAt": 1793122435479,
+  "deliveredAt": 1793122436042,
+  "confirmed": true
+}
+```
+
+| 时刻 | 事件 |
+|---|---|
+| 01:30:55 | 会话那一轮的工具表里出现 `remind_later / remind_list / remind_cancel` |
+| 01:30:55 | 模型自己调用 `remind_later`，选了 `mode: "text"` |
+| 01:33:55.479 | 定时器触发（误差 0.5 秒内） |
+| 01:33:56.042 | 投递完成，微信数据库回执 `confirmed: true` |
+
+自检脚本的输出长这样：
+
+```json
+{
+  "chat": true,
+  "fromSession": "social-8b23659d…",
+  "mode": "social",
+  "reader": true,
+  "hook": true,
+  "target": "昵称 (wxid_…)"
+}
+```
+
+`mode: "wake"`（到点真叫醒再说话）走同一条链路（`agent.followup()` + 抓 `turn/end` 正文），还没在「到点必须现查现说」的任务上单独验收——第一次用建议先这么试一次。
+
 ## 怎么授权（关键）
 
 插件不自己判模式，**要不要给某个微信聊天用，仍然在 WeChatAgent 里按聊天勾选**：
