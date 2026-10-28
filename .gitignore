@@ -1,0 +1,19 @@
+# 依赖与构建产物
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# 运行时状态（这里面是聊天记录、待触发列表、本机路径，绝不能提交）
+wechat-wake.json
+*.local.json
+
+# 日志与临时文件
+*.log
+*.tmp
+*.zip
+
+# 系统垃圾
+.DS_Store
+Thumbs.db
+desktop.ini

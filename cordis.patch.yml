@@ -1,0 +1,8 @@
+# DSH「微信定时唤醒」
+# 这一行把宿主半边挂进 profile；工具本身要不要给某个微信聊天用，
+# 仍然在 WeChatAgent 的「能力与权限」里按聊天勾选（dshAccess.tools）。
+#
+# ⚠ id 会出现在日志前缀里，改成别的也行，但和 package.json 的 name 别混。
+- insert:
+    - id: wechat-wake
+      name: 'dsh-wechat-wake'
